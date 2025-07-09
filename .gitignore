@@ -1,0 +1,7 @@
+__pycache__
+.vscode
+build
+frames
+SCNN
+seg_label_generate
+*.mp4
