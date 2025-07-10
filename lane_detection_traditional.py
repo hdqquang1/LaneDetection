@@ -2,8 +2,18 @@ import cv2 as cv
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import os.path
 
 from utils import *
+
+
+imgCount = 0
+
+
+# Folder path
+folderName = 'frame'
+if not os.path.exists(folderName):
+    os.makedirs(folderName)
 
 
 # Set scale factor
@@ -11,7 +21,6 @@ scale = 0.5
 
 
 # Initialise camera
-# cap = cv.VideoCapture('lane-detection-with-opencv/resources/project_video.mp4')
 cap = cv.VideoCapture('camera_hdr_sped_up.mp4')
 
 
@@ -22,13 +31,12 @@ frameHeight = cap.get(4)
 
 while (cap.isOpened()):
     ret, frame = cap.read()
-    # frame = cv.imread(
-    #     './lane-detection-with-opencv/resources/test_images/test_shadow.jpg')
-    # frame = cv.imread('frames/frame4500.jpg')
-    frame = cv.resize(frame, (int(scale*frameWidth),
-                      int(scale*frameHeight)), None)
 
     if ret:
+        # Resize frame to display
+        frame = cv.resize(frame, (int(scale*frameWidth),
+                                  int(scale*frameHeight)), None)
+
         # Convert to grayscale
         frameGray = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
 
@@ -48,12 +56,7 @@ while (cap.isOpened()):
         frameCanny = cv.Canny(frameBlur, 100, 200, None, 3)
 
         # Sobel gradient
-        # sobelGradBin = sobelAbsThresh(frameGray, ksize=3, thresh=(20,100))
-        # sobelMagBin = sobelMagThresh(frameGray, ksize=7, thresh=(50,100))
-        # sobelDirBin = sobelDirThresh(frameGray, ksize=29, thresh=(1.1,1.3))
-        # frameSobelBin = colorHLSGradThresh(frame)
-        frameSobelBin = colorBGRGradThresh(frame)
-
+        frameSobelBin = colorGradThresh(frame)
 
         # Perspective transform
         # frameWarped, M = perspectiveTrans(255*frameSobelBin, mtx, dist)
@@ -74,32 +77,30 @@ while (cap.isOpened()):
 
         # ROI
         mask = np.zeros_like(frame)
-        pts = np.array([[700, 100], [1100, 100], 
-                        [1100, frameHeight], [0, frameHeight], [0, frameHeight*0.6]])
+        # pts = np.array([[700, 100], [1100, 100], [1100, frameHeight],
+        #                 [0, frameHeight], [0, frameHeight*0.6]])
+        pts = np.array([[0, 100], [1100, 100],
+                        [1100, frameHeight], [0, frameHeight]])
         ptsScaled = np.multiply(pts, scale).astype(np.int32)
         cv.fillPoly(mask, [ptsScaled], (0, 255, 0))
         frame = cv.addWeighted(frame, 1.0, mask, 0.3, 0)
 
-        # frameROI = ROI(frameCanny, ptsScaled)
-        frameROI = ROI(frameSobelBin, ptsScaled)
+        frameROI = ROI(frameCanny, ptsScaled)
+        # frameROI = ROI(frameSobelBin, ptsScaled)
 
-        # Hough Transform
+        # Hough transform
         lines = cv.HoughLinesP(frameROI, 1, np.pi/180, 100, None, 50, 50)
+        # drawHoughLines(frame, lines)
 
-        if lines is not None:
-            for i in range(0, len(lines)):
-                l = lines[i][0]
-
-                # Filter lines through argument/slope
-                arg = np.arctan2(np.abs([l[3] - l[1]]), np.abs([l[2] - l[0]]))
-                if (arg > np.pi/6):
-                    cv.line(frame, (l[0], l[1]), (l[2], l[3]),
-                            (0, 0, 255), 1, cv.LINE_AA)
+        # Annotate frame
+        filename = f'{imgCount:05}.lines.txt'
+        dirName = os.path.join(folderName, filename)
+        annotateFrame(dirName, lines)
+        imgCount += 1
 
         cv.imshow('frame', frame)
-        # cv.imshow('frameCanny', frameCanny)
-        # cv.imshow('frameOpening', frameOpening)
-        cv.imshow('frameSobelBin', frameSobelBin)
+        cv.imshow('frameCanny', frameCanny)
+        # cv.imshow('frameSobelBin', frameSobelBin)
         # cv.imshow('frameROI', frameROI)
         # # cv.imshow('frameLines', frameLines)
         # cv.imshow('frameWarped', frameWarped)
@@ -107,6 +108,9 @@ while (cap.isOpened()):
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
+
+    else:
+        break
 
 cap.release()
 cv.destroyAllWindows()

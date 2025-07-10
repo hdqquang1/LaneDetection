@@ -2,106 +2,45 @@ import cv2 as cv
 import numpy as np
 from numpy.linalg import inv
 
-# Get binary image with Sobel gradient
-def sobelAbsThresh(img, orient='x', ksize=3, thresh=(0, 255)):
-    if orient == 'x':
-        sobel = cv.Sobel(img, cv.CV_64F, 1, 0, ksize=ksize)
-    elif orient == 'y':
-        sobel = cv.Sobel(img, cv.CV_64F, 0, 1, ksize=ksize)
-    sobelAbs = np.absolute(sobel)
-    sobelScaled = np.uint8(255*sobelAbs/np.max(sobelAbs))
-    sobelBin = np.zeros_like(sobelScaled)
-    sobelBin[(sobelScaled >= thresh[0]) & (sobelScaled <= thresh[1])] = 255
 
-    return sobelBin
+# Get binary image with color and Sobel gradient thresholding
+def colorGradThresh(img):
 
+    threshBGR = 130
+    threshSobelX = (100, 200)
 
-# Get binary image with magnitude of Sobel gradient
-def sobelMagThresh(img, ksize=3, thresh=(0, 255)):
-    sobelX = cv.Sobel(img, cv.CV_64F, 1, 0, ksize=ksize)
-    sobelY = cv.Sobel(img, cv.CV_64F, 0, 1, ksize=ksize)
-    sobelMag = np.sqrt(sobelX*sobelX + sobelY*sobelY)
-    sobelScaled = np.uint8(255*sobelMag/np.max(sobelMag))
-    sobelBin = np.zeros_like(sobelScaled)
-    sobelBin[(sobelScaled >= thresh[0]) & (sobelScaled <= thresh[1])] = 255
+    imgBGR = img.astype(np.float32)
+    bChannel = imgBGR[:, :, 0]
+    gChannel = imgBGR[:, :, 1]
+    rChannel = imgBGR[:, :, 2]
 
-    return sobelBin
-
-
-# Get binary image with direction of Sobel gradient as the artangetn of gradient
-# in y divided by gradient in x
-def sobelDirThresh(img, ksize=3, thresh=(0, np.pi/2)):
-    sobelX = cv.Sobel(img, cv.CV_64F, 1, 0, ksize=ksize)
-    sobelY = cv.Sobel(img, cv.CV_64F, 0, 1, ksize=ksize)
-    sobelXAbs = np.abs(sobelX)
-    sobelYAbs = np.abs(sobelY)
-    sobelDir = np.arctan2(sobelYAbs, sobelXAbs)
-    sobelBin = np.zeros_like(sobelDir)
-    sobelBin[(sobelDir >= thresh[0]) & (sobelDir <= thresh[1])] = 255
-
-    return sobelBin
-
-
-# Combine all Sobel gradient thresholding
-def sobelCombinedThresh(img):
-    sobelX = sobelAbsThresh(img, orient='x', ksize=21, thresh=(20, 100))
-    sobelY = sobelAbsThresh(img, orient='y', ksize=21, thresh=(20, 100))
-    sobelMag = sobelMagThresh(img, ksize=7, thresh=(50, 100))
-    sobelDir = sobelDirThresh(img, ksize=15, thresh=(0.4, 1.3))
-
-    sobelBin = np.zeros_like(sobelMag)
-    sobelBin[((sobelX == 1) | (sobelY == 1))
-             & ((sobelMag == 1) | (sobelDir == 1))] = 255
-
-    return sobelBin
-
-
-# Get binary image with HLS color and Sobel gradient thresholding
-def colorHLSGradThresh(img, threshS=(100, 255),
-                    threshL=(50, 255), threshSobelX=(50, 200)):
-    hls = cv.cvtColor(img, cv.COLOR_BGR2HLS).astype(np.float32)
-    lChannel = hls[:, :, 1]
-    sChannel = hls[:, :, 2]
+    imgHLS = cv.cvtColor(img, cv.COLOR_BGR2HLS).astype(np.float32)
+    hChannel = imgHLS[:, :, 0]
+    lChannel = imgHLS[:, :, 1]
+    sChannel = imgHLS[:, :, 2]
 
     # Sobel gradient in x
-    sobelX = cv.Sobel(lChannel, cv.CV_64F, 1, 0)
+    imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    sobelX = cv.Sobel(imgGray, cv.CV_64F, 1, 0)
     sobelXAbs = np.abs(sobelX)
     sobelXScaled = np.uint8(255*sobelXAbs/np.max(sobelXAbs))
 
     # Threshold gradient in x and color
     bin = np.zeros_like(sobelXScaled)
-    bin[((sChannel >= threshS[0]) & (sChannel <= threshS[1]))
-        & ((lChannel >= threshL[0]) & (lChannel <= threshL[1]))
-        | ((sobelXScaled >= threshSobelX[0])
-        & (sobelXScaled <= threshSobelX[1]))] = 255
+    bin[(bChannel >= threshBGR)
+        & (gChannel >= threshBGR)
+        & (rChannel >= threshBGR)
+        & ((lChannel >= 0) & (lChannel <= 200))
+        & ((sChannel >= 0) & (sChannel <= 255))] = 255
 
-    return bin
-
-
-# Get binary image with BGR color and Sobel gradient thresholding
-def colorBGRGradThresh(img, threshB=(150,255), threshG=(150,255), 
-                       threshR=(150,255), threshSobelX=(100,200)):
-    img = img.astype(np.float32)
-    bChannel = img[:, :, 0]
-    gChannel = img[:, :, 1]
-    rChannel = img[:, :, 2]
-
-    # Sobel gradient in x
-    sobelX = cv.Sobel(bChannel, cv.CV_64F, 1, 0)
-    sobelXAbs = np.abs(sobelX)
-    sobelXScaled = np.uint8(255*sobelXAbs/np.max(sobelXAbs))
-
-    # Threshold gradient in x and color
-    bin = np.zeros_like(sobelXScaled)
-    bin[((bChannel >= threshB[0]) & (bChannel <= threshB[1]))
-        & ((gChannel >= threshG[0]) & (gChannel <= threshG[1]))
-        & ((rChannel >= threshR[0]) & (rChannel <= threshR[1]))
-        | ((sobelXScaled >= threshSobelX[0])
-        & (sobelXScaled <= threshSobelX[1]))] = 255
+    # bin[((lChannel >= 50) & (lChannel <= 255))
+    #     & ((sChannel >= 100) & (sChannel <= 255))] = 255
 
     return bin
 
 # Perspective transform
+
+
 def perspectiveTrans(img, mtx, dist):
     undist = cv.undistort(img, mtx, dist, None, mtx)
 
@@ -230,11 +169,10 @@ def drawLaneLines(imgWarped, M, imgUndist, leftFitX, rightFitX, yVals):
     return cv.addWeighted(imgUndist, 1, linesUnwarp, 1, 0)
 
 
-
 #  Region of interest (ROI)
 def ROI(img, pts):
     mask = np.zeros_like(img)
-    cv.fillPoly(mask, [pts], (255,255,255))
+    cv.fillPoly(mask, [pts], (255, 255, 255))
     imgMasked = cv.bitwise_and(img, mask)
     return imgMasked
 
@@ -248,7 +186,7 @@ def avgHoughLines(img):
     # if HoughLines is not None:
     #     for i in range(0, len(HoughLines)):
     #         l = HoughLines[i]
-            
+
     #         param = np.polyfit((l[0],l[1]), (l[2],l[3]), 1)
     #         slope = param[0]
     #         intercept = param[1]
@@ -260,13 +198,30 @@ def avgHoughLines(img):
     # return avgLines
 
 
-# Draw lines:
-def drawLines(img, lines):
+# Draw Hough lines:
+def drawHoughLines(img, lines, filterArg=np.pi/6):
     if lines is not None:
+        for i in range(0, len(lines)):
+            l = lines[i][0]
+
+            # Filter lines through argument/slope
+            arg = np.arctan2(np.abs([l[3] - l[1]]), np.abs([l[2] - l[0]]))
+            if (arg > filterArg):
+                cv.line(img, (l[0], l[1]), (l[2], l[3]),
+                        (0, 0, 255), 1, cv.LINE_AA)
+                
+
+# Annotate frame by writing points from Hough transform to a file in format of
+# CULane
+def annotateFrame(dirName, lines, filterArg=np.pi/6):
+    with open(dirName, 'w+') as f:
+        if lines is not None:
             for i in range(0, len(lines)):
                 l = lines[i][0]
-                    
-                cv.line(img, (l[0], l[1]), (l[2], l[3]), 
-                        (0,0,255), 3, cv.LINE_AA)
 
+                # Filter lines through argument/slope
+                arg = np.arctan2(np.abs([l[3] - l[1]]), np.abs([l[2] - l[0]]))
+                if (arg > filterArg):
+                    f.writelines(f'{l[0]} {l[1]} {l[2]} {l[3]}\n')
 
+    f.close()

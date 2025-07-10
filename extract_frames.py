@@ -1,8 +1,8 @@
 import cv2 as cv
 import os.path
 
-count = 0
-folderName = 'frames'
+imgCount = 0
+folderName = 'frame'
 
 if not os.path.exists(folderName):
     os.makedirs(folderName)
@@ -17,11 +17,11 @@ while True:
     ret, frame = cap.read()
 
     if ret:
-        fileName = f'frame{count}.jpg'
-        dirName = os.path.join(folderName, fileName)
-        cv.imwrite(dirName, frame)
-        count +=1
-        # print(f'Successfully write a frame at {dirName}.')
+        filename = f'{imgCount:05}.jpg'
+        dir = os.path.join(folderName, filename)
+        cv.imwrite(dir, frame)
+        imgCount +=1
+        # print(f'Successfully write a frame at {dir}.')
     else:
         break
 

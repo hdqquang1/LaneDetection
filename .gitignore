@@ -1,7 +1,7 @@
 __pycache__
 .vscode
 build
-frames
+frame
 SCNN
 seg_label_generate
 *.mp4
