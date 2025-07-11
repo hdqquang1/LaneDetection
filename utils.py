@@ -216,7 +216,7 @@ def drawHoughLines(img, lines, filterArg=np.pi/6):
 def annotateFrame(dirName, lines, filterArg=np.pi/6):
     with open(dirName, 'w+') as f:
         if lines is not None:
-            for i in range(0, len(lines)):
+            for i in range(0, min(len(lines), 17)):
                 l = lines[i][0]
 
                 # Filter lines through argument/slope

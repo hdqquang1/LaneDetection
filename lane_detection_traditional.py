@@ -33,9 +33,6 @@ while (cap.isOpened()):
     ret, frame = cap.read()
 
     if ret:
-        # Resize frame to display
-        frame = cv.resize(frame, (int(scale*frameWidth),
-                                  int(scale*frameHeight)), None)
 
         # Convert to grayscale
         frameGray = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
@@ -79,9 +76,10 @@ while (cap.isOpened()):
         mask = np.zeros_like(frame)
         # pts = np.array([[700, 100], [1100, 100], [1100, frameHeight],
         #                 [0, frameHeight], [0, frameHeight*0.6]])
-        pts = np.array([[0, 100], [1100, 100],
+        pts = np.array([[0,100], [1100, 100],
                         [1100, frameHeight], [0, frameHeight]])
-        ptsScaled = np.multiply(pts, scale).astype(np.int32)
+        # ptsScaled = np.multiply(pts, scale).astype(np.int32)
+        ptsScaled = np.multiply(pts, 1).astype(np.int32)
         cv.fillPoly(mask, [ptsScaled], (0, 255, 0))
         frame = cv.addWeighted(frame, 1.0, mask, 0.3, 0)
 
@@ -90,7 +88,7 @@ while (cap.isOpened()):
 
         # Hough transform
         lines = cv.HoughLinesP(frameROI, 1, np.pi/180, 100, None, 50, 50)
-        # drawHoughLines(frame, lines)
+        drawHoughLines(frame, lines)
 
         # Annotate frame
         filename = f'{imgCount:05}.lines.txt'
@@ -98,13 +96,18 @@ while (cap.isOpened()):
         annotateFrame(dirName, lines)
         imgCount += 1
 
+        # Resize frame to display
+        frame = cv.resize(frame, (int(scale*frameWidth),
+                                  int(scale*frameHeight)), None)
+        
         cv.imshow('frame', frame)
-        cv.imshow('frameCanny', frameCanny)
+        # cv.imshow('frameCanny', frameCanny)
         # cv.imshow('frameSobelBin', frameSobelBin)
         # cv.imshow('frameROI', frameROI)
-        # # cv.imshow('frameLines', frameLines)
+        # cv.imshow('frameLines', frameLines)
         # cv.imshow('frameWarped', frameWarped)
         # cv.imshow('frameUndist', frameUndist)
+
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
