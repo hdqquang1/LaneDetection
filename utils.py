@@ -6,9 +6,6 @@ from numpy.linalg import inv
 # Get binary image with color and Sobel gradient thresholding
 def colorGradThresh(img):
 
-    threshBGR = 130
-    threshSobelX = (100, 200)
-
     imgBGR = img.astype(np.float32)
     bChannel = imgBGR[:, :, 0]
     gChannel = imgBGR[:, :, 1]
@@ -19,28 +16,34 @@ def colorGradThresh(img):
     lChannel = imgHLS[:, :, 1]
     sChannel = imgHLS[:, :, 2]
 
-    # Sobel gradient in x
-    imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    sobelX = cv.Sobel(imgGray, cv.CV_64F, 1, 0)
-    sobelXAbs = np.abs(sobelX)
-    sobelXScaled = np.uint8(255*sobelXAbs/np.max(sobelXAbs))
+    # Sobel magnitude
+    img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-    # Threshold gradient in x and color
-    bin = np.zeros_like(sobelXScaled)
-    bin[(bChannel >= threshBGR)
-        & (gChannel >= threshBGR)
-        & (rChannel >= threshBGR)
-        & ((lChannel >= 0) & (lChannel <= 200))
-        & ((sChannel >= 0) & (sChannel <= 255))] = 255
+    sobelX = cv.Sobel(img, cv.CV_64F, 1, 0)
+    sobelY = cv.Sobel(img, cv.CV_64F, 0, 1)
+    
+    sobelAbsX = np.abs(sobelX)
+    sobelAbsY = np.abs(sobelY)
+    sobelMag = np.sqrt(np.power(sobelAbsX, 2) + np.power(sobelAbsY, 2))
 
-    # bin[((lChannel >= 50) & (lChannel <= 255))
-    #     & ((sChannel >= 100) & (sChannel <= 255))] = 255
+    sobelScaled = np.uint8(255*sobelMag/np.max(sobelMag))
+
+    # Thresholding
+    bin = np.zeros_like(sobelScaled)
+    bin[True
+        & ((bChannel >= 200) & (bChannel <= 255))
+        & ((gChannel >= 200) & (gChannel <= 255))
+        & ((rChannel >= 200) & (rChannel <= 255))
+        # & ((hChannel >= 50) & (hChannel <= 255))
+        # & ((lChannel >= 100) & (lChannel <= 255))
+        # & ((sChannel >= 100) & (sChannel <= 255))
+        # & ((sobelScaled >= 30) & (sobelScaled <= 100))
+        | ((sobelAbsX >= 100) & (sobelAbsX <= 200))] = 255
 
     return bin
 
+
 # Perspective transform
-
-
 def perspectiveTrans(img, mtx, dist):
     undist = cv.undistort(img, mtx, dist, None, mtx)
 
@@ -225,3 +228,41 @@ def annotateFrame(dirName, lines, filterArg=np.pi/6):
                     f.writelines(f'{l[0]} {l[1]} {l[2]} {l[3]}\n')
 
     f.close()
+
+
+# Generate SDCT kernel of size N x N for bin-indices k1, k2
+def SDCTkernel(N, k1, k2):
+    kernel = np.zeros((N, N), dtype=np.float32)
+    for m in range(N):
+        for n in range(N):
+            Cmk1 = np.cos(np.pi * (m + 0.5) * k1 / N)
+            Cnk2 = np.cos(np.pi * (n + 0.5) * k2 / N)
+            kernel[m, n] = Cmk1 * Cnk2
+
+    return kernel
+
+# Edge detection using SDCT-based convolution kernels
+def SDCT(img, kernel_size=3):
+    if img.ndim == 3:
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+    N = kernel_size
+
+    # SDCT horizontal and vertical kernels
+    kernelHor = SDCTkernel(N, k1=0, k2=1)
+    kernelVert = SDCTkernel(N, k1=1, k2=0)
+
+    # Convolve with image
+    F01 = cv.filter2D(img.astype(np.float32), -1, kernelHor)
+    F10 = cv.filter2D(img.astype(np.float32), -1, kernelVert)
+
+    # Magnitude of SDCT response
+    mag = np.sqrt(F01**2 + F10**2)
+
+    # Threshold 4 times mean values of convolved outputs
+    thres = 4 * np.mean(mag)
+
+    # Binary edge map
+    bin = np.uint8(mag > thres) * 255
+
+    return bin

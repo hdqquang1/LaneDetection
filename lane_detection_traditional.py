@@ -50,13 +50,16 @@ while (cap.isOpened()):
             frameGray, ksize=(3, 3), sigmaX=0, sigmaY=0)
 
         # Canny edge detector
-        frameCanny = cv.Canny(frameBlur, 100, 200, None, 3)
+        frameCanny = cv.Canny(frameBlur, 50, 200, None, 3)
 
         # Sobel gradient
-        frameSobelBin = colorGradThresh(frame)
+        frameSobel = colorGradThresh(frame)
+
+        # 2-D SDCT
+        frameSDCT = SDCT(frame)
 
         # Perspective transform
-        # frameWarped, M = perspectiveTrans(255*frameSobelBin, mtx, dist)
+        # frameWarped, M = perspectiveTrans(255*frameSobel, mtx, dist)
 
         # Fit lane lines
         # leftFitX, rightFitX, yVals, _, _ = fitLaneLines(frameWarped)
@@ -76,38 +79,37 @@ while (cap.isOpened()):
         mask = np.zeros_like(frame)
         # pts = np.array([[700, 100], [1100, 100], [1100, frameHeight],
         #                 [0, frameHeight], [0, frameHeight*0.6]])
-        pts = np.array([[0,100], [1100, 100],
-                        [1100, frameHeight], [0, frameHeight]])
-        # ptsScaled = np.multiply(pts, scale).astype(np.int32)
-        ptsScaled = np.multiply(pts, 1).astype(np.int32)
-        cv.fillPoly(mask, [ptsScaled], (0, 255, 0))
+        pts = np.array([[0, 100], [1100, 100],
+                        [1100, frameHeight], [0, frameHeight]], dtype=np.int32)
+        pts = pts.reshape((-1, 1, 2))
         frame = cv.addWeighted(frame, 1.0, mask, 0.3, 0)
 
-        frameROI = ROI(frameCanny, ptsScaled)
-        # frameROI = ROI(frameSobelBin, ptsScaled)
+        frameROI = ROI(frameSobel, pts)
 
         # Hough transform
-        lines = cv.HoughLinesP(frameROI, 1, np.pi/180, 100, None, 50, 50)
-        drawHoughLines(frame, lines)
+        # lines = cv.HoughLinesP(frameROI, 1, np.pi/180, 100, None, 50, 50)
+        # drawHoughLines(frame, lines)
 
         # Annotate frame
-        filename = f'{imgCount:05}.lines.txt'
-        dirName = os.path.join(folderName, filename)
-        annotateFrame(dirName, lines)
-        imgCount += 1
+        # filename = f'{imgCount:05}.lines.txt'
+        # dirName = os.path.join(folderName, filename)
+        # annotateFrame(dirName, lines)
+        # imgCount += 1
 
         # Resize frame to display
         frame = cv.resize(frame, (int(scale*frameWidth),
                                   int(scale*frameHeight)), None)
-        
+        frameSDCT = cv.resize(frameSDCT, (int(scale*frameWidth),
+                                            int(scale*frameHeight)), None)
+
         cv.imshow('frame', frame)
         # cv.imshow('frameCanny', frameCanny)
-        # cv.imshow('frameSobelBin', frameSobelBin)
+        # cv.imshow('frameSobel', frameSobel)
+        cv.imshow('frameSDCT', frameSDCT)
         # cv.imshow('frameROI', frameROI)
         # cv.imshow('frameLines', frameLines)
         # cv.imshow('frameWarped', frameWarped)
         # cv.imshow('frameUndist', frameUndist)
-
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
