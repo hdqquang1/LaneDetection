@@ -9,25 +9,20 @@ from utils import *
 
 imgCount = 0
 
-
 # Folder path
 folderName = 'frame'
 if not os.path.exists(folderName):
     os.makedirs(folderName)
 
-
 # Set scale factor
 scale = 0.5
-
 
 # Initialise camera
 cap = cv.VideoCapture('camera_hdr_sped_up.mp4')
 
-
 # Set frame width and height
 frameWidth = cap.get(3)
 frameHeight = cap.get(4)
-
 
 while (cap.isOpened()):
     ret, frame = cap.read()
@@ -53,7 +48,7 @@ while (cap.isOpened()):
         frameCanny = cv.Canny(frameBlur, 50, 200, None, 3)
 
         # Sobel gradient
-        frameSobel = colorGradThresh(frame)
+        # frameSobel = colorGradThresh(frame)
 
         # 2-D SDCT
         frameSDCT = SDCT(frame)
@@ -82,9 +77,10 @@ while (cap.isOpened()):
         pts = np.array([[0, 100], [1100, 100],
                         [1100, frameHeight], [0, frameHeight]], dtype=np.int32)
         pts = pts.reshape((-1, 1, 2))
+        # cv.fillPoly(mask, [pts], (0, 255, 0))
         frame = cv.addWeighted(frame, 1.0, mask, 0.3, 0)
 
-        frameROI = ROI(frameSobel, pts)
+        frameROI = ROI(frameCanny, pts)
 
         # Hough transform
         # lines = cv.HoughLinesP(frameROI, 1, np.pi/180, 100, None, 50, 50)
@@ -111,7 +107,9 @@ while (cap.isOpened()):
         # cv.imshow('frameWarped', frameWarped)
         # cv.imshow('frameUndist', frameUndist)
 
-        if cv.waitKey(1) & 0xFF == ord('q'):
+        if cv.waitKey(0) & 0xFF == ord('q'):
+            continue
+        if cv.waitKey(0) & 0xFF == 27:
             break
 
     else:

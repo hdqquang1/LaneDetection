@@ -5,7 +5,6 @@ from numpy.linalg import inv
 
 # Get binary image with color and Sobel gradient thresholding
 def colorGradThresh(img):
-
     imgBGR = img.astype(np.float32)
     bChannel = imgBGR[:, :, 0]
     gChannel = imgBGR[:, :, 1]
@@ -21,7 +20,7 @@ def colorGradThresh(img):
 
     sobelX = cv.Sobel(img, cv.CV_64F, 1, 0)
     sobelY = cv.Sobel(img, cv.CV_64F, 0, 1)
-    
+
     sobelAbsX = np.abs(sobelX)
     sobelAbsY = np.abs(sobelY)
     sobelMag = np.sqrt(np.power(sobelAbsX, 2) + np.power(sobelAbsY, 2))
@@ -211,8 +210,8 @@ def drawHoughLines(img, lines, filterArg=np.pi/6):
             arg = np.arctan2(np.abs([l[3] - l[1]]), np.abs([l[2] - l[0]]))
             if (arg > filterArg):
                 cv.line(img, (l[0], l[1]), (l[2], l[3]),
-                        (0, 0, 255), 1, cv.LINE_AA)
-                
+                        (0, 0, 255), 5, cv.LINE_AA)
+
 
 # Annotate frame by writing points from Hough transform to a file in format of
 # CULane
@@ -240,6 +239,7 @@ def SDCTkernel(N, k1, k2):
             kernel[m, n] = Cmk1 * Cnk2
 
     return kernel
+
 
 # Edge detection using SDCT-based convolution kernels
 def SDCT(img, kernel_size=3):
