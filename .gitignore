@@ -4,6 +4,11 @@ Automatic-Workspace-Calibration-Based-on-Aruco
 build
 frame
 frame_calib
+ros2_ws/calibrationdata*
+ros2_ws/build
+ros2_ws/install
+ros2_ws/log
+ros2_ws/rosbag2_*
 SCNN
 seg_label_generate
 *.mp4

@@ -11,26 +11,32 @@ class CameraInfoPublisher(Node):
 
     def __init__(self):
         super().__init__('camera_info_publisher')
+        self.__calibration_yaml = self.declare_parameter(
+            'yaml_path', 'calibrationdata/ost.yaml').value
+        self.__image_topic = self.declare_parameter(
+            'image_topic', 'camera_left/image/compressed').value
+        self.__camera_info_topic = self.declare_parameter(
+            'camera_info_topic', '/camera_info').value
 
-        self.publisher_ = self.create_publisher(CameraInfo, '/camera_info', 10)
-        self.subsription = self.create_subscription(
+        self.__publisher = self.create_publisher(
+            CameraInfo, self.__camera_info_topic, 10)
+        self.__subsription = self.create_subscription(
             CompressedImage,
-            '/camera_left/image/compressed',
-            self._image_callback,
+            self.__image_topic,
+            self.__image_callback,
             10
         )
-        self.subsription
+        self.__subsription
 
-        self._calibration_yaml = f'/tmp/calibrationdata/ost.yaml'
-        self._camera_info_msg = self._parse_yaml()
+        self.__camera_info_msg = self.__parse_yaml()
 
-    def _image_callback(self, image_msg):
-        self._camera_info_msg.header = image_msg.header
-        self.publisher_.publish(self._camera_info_msg)
+    def __image_callback(self, image_msg):
+        self.__camera_info_msg.header = image_msg.header
+        self.__publisher.publish(self.__camera_info_msg)
 
-    def _parse_yaml(self):
+    def __parse_yaml(self):
         # Load data from file
-        with open(self._calibration_yaml, 'r') as f:
+        with open(self.__calibration_yaml, 'r') as f:
             calibration_data = yaml.safe_load(f)
 
         # Parse
