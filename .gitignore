@@ -3,7 +3,7 @@ __pycache__
 Automatic-Workspace-Calibration-Based-on-Aruco
 build
 frame
-frame_calib
+paper
 ros2_ws/calibrationdata*
 ros2_ws/build
 ros2_ws/install

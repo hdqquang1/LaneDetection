@@ -1,6 +1,8 @@
 import cv2 as cv
 import numpy as np
 from numpy.linalg import inv
+import os.path
+import yaml
 
 
 # Get binary image with color and Sobel gradient thresholding
@@ -172,61 +174,61 @@ def drawLaneLines(imgWarped, M, imgUndist, leftFitX, rightFitX, yVals):
 
 
 #  Region of interest (ROI)
-def ROI(img, pts):
+def ROI(img, poly):
+    if img.ndim == 3:
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     mask = np.zeros_like(img)
-    cv.fillPoly(mask, [pts], (255, 255, 255))
+    for pts in poly:
+        cv.fillPoly(mask, [pts], (255, 255, 255))
     imgMasked = cv.bitwise_and(img, mask)
     return imgMasked
 
 
-# Average Hough Transform lines
-def avgHoughLines(img):
-    HoughLines = cv.HoughLinesP(img, 1, np.pi/180, 50, None, 200, 50)
-    print(HoughLines)
-    # lines = []
-
-    # if HoughLines is not None:
-    #     for i in range(0, len(HoughLines)):
-    #         l = HoughLines[i]
-
-    #         param = np.polyfit((l[0],l[1]), (l[2],l[3]), 1)
-    #         slope = param[0]
-    #         intercept = param[1]
-    #         if (slope > 0.5):
-    #             lines.append((slope, intercept))
-
-    # avgLines = np.average(lines, axis=0)
-
-    # return avgLines
-
-
-# Draw Hough lines:
-def drawHoughLines(img, lines, filterArg=np.pi/6):
+# Draw Hough lines
+def drawHoughLines(img, lines, slope_threshold=[0, 90]):
     if lines is not None:
         for i in range(0, len(lines)):
             l = lines[i][0]
 
-            # Filter lines through argument/slope
-            arg = np.arctan2(np.abs([l[3] - l[1]]), np.abs([l[2] - l[0]]))
-            if (arg > filterArg):
-                cv.line(img, (l[0], l[1]), (l[2], l[3]),
-                        (0, 0, 255), 5, cv.LINE_AA)
+            cv.line(img, (l[0], l[1]), (l[2], l[3]),
+                    (0, 0, 255), 5, cv.LINE_AA)
 
 
 # Annotate frame by writing points from Hough transform to a file in format of
 # CULane
-def annotateFrame(dirName, lines, filterArg=np.pi/6):
+def annotateFrame(imgCount, frame_folder,
+                  lines, slope_threshold=[0, 90], manual_mode=False):
+    filename = f'{imgCount:05}.lines.txt'
+    dirName = os.path.join(frame_folder, filename)
     with open(dirName, 'w+') as f:
         if lines is not None:
             for i in range(0, min(len(lines), 17)):
                 l = lines[i][0]
-
-                # Filter lines through argument/slope
-                arg = np.arctan2(np.abs([l[3] - l[1]]), np.abs([l[2] - l[0]]))
-                if (arg > filterArg):
-                    f.writelines(f'{l[0]} {l[1]} {l[2]} {l[3]}\n')
+                f.writelines(f'{l[0]} {l[1]} {l[2]} {l[3]}\n')
 
     f.close()
+
+
+# Filter Hough transform lines through slope threshold
+def filterHoughLines(lines, slope_threshold):
+    if lines is None:
+        return None
+
+    l = lines[:, 0, :]
+
+    slopesRad = np.arctan2((l[:, 1] - l[:, 3]), (l[:, 2] - l[:, 0]))
+    slopesDeg = np.degrees(slopesRad)
+
+    slopesDeg[slopesDeg < 0] += 180
+
+    mask = (slopesDeg > slope_threshold[0]) & (slopesDeg < slope_threshold[1])
+
+    linesFiltered = lines[mask]
+
+    if linesFiltered.shape == 0:
+        return None
+    else:
+        return linesFiltered
 
 
 # Generate SDCT kernel of size N x N for bin-indices k1, k2
@@ -242,7 +244,7 @@ def SDCTkernel(N, k1, k2):
 
 
 # Edge detection using SDCT-based convolution kernels
-def SDCT(img, kernel_size=3):
+def SDCT(img, kernel_size=3, threshold=4):
     if img.ndim == 3:
         img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
@@ -260,9 +262,20 @@ def SDCT(img, kernel_size=3):
     mag = np.sqrt(F01**2 + F10**2)
 
     # Threshold 4 times mean values of convolved outputs
-    thres = 4 * np.mean(mag)
+    thres = threshold * np.mean(mag)
 
     # Binary edge map
     bin = np.uint8(mag > thres) * 255
 
     return bin
+
+
+# Parse yaml file to read camera matrix and distortion coefficients
+def parse_yaml(yaml_path):
+    with open(yaml_path, 'r') as f:
+        calibrationData = yaml.safe_load(f)
+
+    mtx = np.array(calibrationData['camera_matrix']['data']).reshape(3, 3)
+    dist = np.array(calibrationData['distortion_coefficients']['data'])
+
+    return mtx, dist

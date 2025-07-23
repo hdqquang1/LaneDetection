@@ -1,119 +1,179 @@
+import argparse
 import cv2 as cv
-import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-import os.path
+import os
 
+from constants import (
+    FRAME_FOLDER,
+    YAML_PATH,
+    VIDEO_PATH,
+    SCALE
+)
 from utils import *
 
-
-imgCount = 0
-
-# Folder path
-folderName = 'frame'
-if not os.path.exists(folderName):
-    os.makedirs(folderName)
-
-# Set scale factor
-scale = 0.5
+# Arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-a', '--annotate',
+    help='annotate the frame to file',
+    action='store_true')
+parser.add_argument(
+    '-n', '--no_line',
+    help='no Hough transform',
+    action='store_false')
+parser.add_argument(
+    '-m1', '--manual_mode_1',
+    help='manual mode to label line, enter line in form of x1 y1 x2 y2',
+    nargs=4,
+    type=int,
+    metavar=('x1', 'y1', 'x2', 'y2'))
+parser.add_argument(
+    '-m2', '--manual_mode_2',
+    help='manual mode to label line, enter line in form of x1 y1 x2 y2',
+    nargs=4,
+    type=int,
+    metavar=('x1', 'y1', 'x2', 'y2'))
+parser.add_argument(
+    '--start_frame',
+    help='starting frame id to label',
+    type=int,
+    metavar='id')
+parser.add_argument(
+    '-w', '--warp',
+    help='warp and output undistorted image based on camera calibration',
+    action='store_true'
+)
+args = parser.parse_args()
 
 # Initialise camera
-cap = cv.VideoCapture('camera_hdr_sped_up.mp4')
+cap = cv.VideoCapture(VIDEO_PATH)
 
-# Set frame width and height
-frameWidth = cap.get(3)
-frameHeight = cap.get(4)
+# Get frame width and height
+frameWidth = int(cap.get(3))
+frameHeight = int(cap.get(4))
 
-while (cap.isOpened()):
-    ret, frame = cap.read()
+# Read calibration data
+mtx, dist = parse_yaml(YAML_PATH)
 
-    if ret:
+# Refine camera matrix
+newCameraMtx, _ = cv.getOptimalNewCameraMatrix(
+    mtx,
+    dist,
+    (frameWidth, frameHeight),
+    0,
+    (frameWidth, frameHeight)
+)
 
-        # Convert to grayscale
-        frameGray = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
+# Undistort image
+if args.warp:
+    img = cv.imread('paper/camera_calibration_raw.png')
+    img = cv.undistort(img, mtx, dist, None, newCameraMtx)
+    cv.imwrite('paper/camera_calibration_undistorted.png', img)
+    exit()
 
-        # Read calibration
-        # calib = pickle.load(open('calibration.p', 'rb'))
-        # mtx = calib['mtx']
-        # dist = calib['dist']
+# Threshold constants
+SDCT_THRESHOLD  = 6
+SLOPE_THRESHOLD = [26, 90]
+START_FRAME     = 1601
+STOP_FRAME      = None
+MIN_LINE_LENGTH = 200
+MAX_LINE_GAP    = 20
 
-        # Undistort frame
-        # frameUndist = cv.undistort(frame, mtx, dist)
+# Frame counter
+imgCount = START_FRAME
+if (args.start_frame):
+    imgCount = args.start_frame
 
-        # Blur frame
-        frameBlur = cv.GaussianBlur(
-            frameGray, ksize=(3, 3), sigmaX=0, sigmaY=0)
+while True:
 
-        # Canny edge detector
-        frameCanny = cv.Canny(frameBlur, 50, 200, None, 3)
+    filename = os.path.join(FRAME_FOLDER, f'{imgCount:05}.jpg')
+    if not os.path.exists(filename):
+        break
+    frame = cv.imread(filename)
+    print(f'----------Frame {imgCount:05}----------')
 
-        # Sobel gradient
-        # frameSobel = colorGradThresh(frame)
+    # 2-D SDCT
+    frameSDCT = SDCT(frame, 7, SDCT_THRESHOLD)
 
-        # 2-D SDCT
-        frameSDCT = SDCT(frame)
-
-        # Perspective transform
-        # frameWarped, M = perspectiveTrans(255*frameSobel, mtx, dist)
-
-        # Fit lane lines
-        # leftFitX, rightFitX, yVals, _, _ = fitLaneLines(frameWarped)
-
-        # plt.xlim(0, 1280)
-        # plt.ylim(0, 720)
-        # plt.plot(leftFitX, yVals, color='green', linewidth=3)
-        # plt.plot(rightFitX, yVals, color='green', linewidth=3)
-        # plt.gca().invert_yaxis()
-        # plt.show()
-
-        # Draw lines on frame
-        # frameLines = drawLaneLines(frameWarped, M, frameUndist,
-        #                         leftFitX, rightFitX, yVals)
-
-        # ROI
-        mask = np.zeros_like(frame)
-        # pts = np.array([[700, 100], [1100, 100], [1100, frameHeight],
-        #                 [0, frameHeight], [0, frameHeight*0.6]])
-        pts = np.array([[0, 100], [1100, 100],
-                        [1100, frameHeight], [0, frameHeight]], dtype=np.int32)
-        pts = pts.reshape((-1, 1, 2))
-        # cv.fillPoly(mask, [pts], (0, 255, 0))
+    # ROI
+    mask = np.zeros_like(frame)
+    poly = np.array(
+        [
+            [
+                [0, 100], 
+                [1090, 100], 
+                [1090, frameHeight], 
+                # [550, frameHeight],
+                [0, frameHeight]
+            ],
+            # [
+            #     [950, 100], 
+            #     [1060, 100], 
+            #     [1060, frameHeight], 
+            #     [900, frameHeight]
+            # ]
+        ],
+        dtype=np.int32)
+    for pts in poly:
+        cv.polylines(mask, [pts], True, (0, 255, 0), 10)
         frame = cv.addWeighted(frame, 1.0, mask, 0.3, 0)
 
-        frameROI = ROI(frameCanny, pts)
+    frameROI = ROI(frameSDCT, poly)
 
-        # Hough transform
-        # lines = cv.HoughLinesP(frameROI, 1, np.pi/180, 100, None, 50, 50)
-        # drawHoughLines(frame, lines)
+    # Hough transform
+    lines = None
+    if args.no_line:
+        lines = cv.HoughLinesP(
+            frameROI, 1, np.pi/180, 100, None, MIN_LINE_LENGTH, MAX_LINE_GAP)
+        lines = filterHoughLines(lines, SLOPE_THRESHOLD)
 
-        # Annotate frame
-        # filename = f'{imgCount:05}.lines.txt'
-        # dirName = os.path.join(folderName, filename)
-        # annotateFrame(dirName, lines)
-        # imgCount += 1
+    # Manually add line
+    if (args.manual_mode_1) and (len(args.manual_mode_1) == 4):
+        if lines is None:
+            lines = np.array([[args.manual_mode_1]])
+        else:
+            lines = np.append(lines, [[args.manual_mode_1]], axis=0)
+    
+    if (args.manual_mode_2) and (len(args.manual_mode_2) == 4):
+        if lines is None:
+            lines = np.array([[args.manual_mode_2]])
+        else:
+            lines = np.append(lines, [[args.manual_mode_2]], axis=0)
+            
+    # Draw lines on frame
+    frameHough = frame.copy()
+    drawHoughLines(frameHough, lines, SLOPE_THRESHOLD)
 
-        # Resize frame to display
-        frame = cv.resize(frame, (int(scale*frameWidth),
-                                  int(scale*frameHeight)), None)
-        frameSDCT = cv.resize(frameSDCT, (int(scale*frameWidth),
-                                            int(scale*frameHeight)), None)
+    # Annotate frame
+    if args.annotate:
+        annotateFrame(imgCount, FRAME_FOLDER, lines, SLOPE_THRESHOLD)
+        print(f'Annotated frame {imgCount:05}')
 
-        cv.imshow('frame', frame)
-        # cv.imshow('frameCanny', frameCanny)
-        # cv.imshow('frameSobel', frameSobel)
-        cv.imshow('frameSDCT', frameSDCT)
-        # cv.imshow('frameROI', frameROI)
-        # cv.imshow('frameLines', frameLines)
-        # cv.imshow('frameWarped', frameWarped)
-        # cv.imshow('frameUndist', frameUndist)
+    # Resize frame for display
+    frameHough = cv.resize(
+        frameHough, (int(SCALE*frameWidth), int(SCALE*frameHeight)), None)
+    frameROI = cv.resize(
+        frameROI, (int(SCALE*frameWidth), int(SCALE*frameHeight)), None)
+    
+    # cv.imshow('frame', frame)
+    # cv.imshow('frameSDCT', frameSDCT)
+    cv.imshow('frameROI', frameROI)
+    cv.imshow('frameHough', frameHough)
 
-        if cv.waitKey(0) & 0xFF == ord('q'):
-            continue
-        if cv.waitKey(0) & 0xFF == 27:
-            break
+    key = cv.waitKey(0) & 0xFF
 
-    else:
+    if key == 27:
         break
+    elif key == ord('q'):
+        if STOP_FRAME is not None and imgCount >= STOP_FRAME:
+            break
+        imgCount += 1
+        continue
+    elif key == ord('w'):
+        imgCount -= 1
+        continue
+
 
 cap.release()
 cv.destroyAllWindows()
