@@ -1,16 +1,15 @@
 import argparse
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 
-from constants import (
-    FRAME_FOLDER,
+from src.config.constants import (
+    CULANE_FRAME_FOLDER,
     YAML_PATH,
     VIDEO_PATH,
     SCALE
 )
-from utils import *
+from src.lane_detection.utils import *
 
 # Arguments
 parser = argparse.ArgumentParser()
@@ -52,6 +51,8 @@ cap = cv.VideoCapture(VIDEO_PATH)
 # Get frame width and height
 frameWidth = int(cap.get(3))
 frameHeight = int(cap.get(4))
+# frameWidth = 1640
+# frameHeight = 590
 
 # Read calibration data
 mtx, dist = parse_yaml(YAML_PATH)
@@ -73,12 +74,12 @@ if args.warp:
     exit()
 
 # Threshold constants
-SDCT_THRESHOLD  = 6
-SLOPE_THRESHOLD = [26, 90]
-START_FRAME     = 1601
-STOP_FRAME      = None
+SDCT_THRESHOLD = 3
+SLOPE_THRESHOLD = [26, 60]
+START_FRAME = 0
+STOP_FRAME = None
 MIN_LINE_LENGTH = 200
-MAX_LINE_GAP    = 20
+MAX_LINE_GAP = 20
 
 # Frame counter
 imgCount = START_FRAME
@@ -87,7 +88,7 @@ if (args.start_frame):
 
 while True:
 
-    filename = os.path.join(FRAME_FOLDER, f'{imgCount:05}.jpg')
+    filename = os.path.join(CULANE_FRAME_FOLDER, f'{imgCount:05}.jpg')
     if not os.path.exists(filename):
         break
     frame = cv.imread(filename)
@@ -101,16 +102,16 @@ while True:
     poly = np.array(
         [
             [
-                [0, 100], 
-                [1090, 100], 
-                [1090, frameHeight], 
+                [0, 100],
+                [1090, 100],
+                [1090, frameHeight],
                 # [550, frameHeight],
                 [0, frameHeight]
             ],
             # [
-            #     [950, 100], 
-            #     [1060, 100], 
-            #     [1060, frameHeight], 
+            #     [950, 100],
+            #     [1060, 100],
+            #     [1060, frameHeight],
             #     [900, frameHeight]
             # ]
         ],
@@ -134,20 +135,20 @@ while True:
             lines = np.array([[args.manual_mode_1]])
         else:
             lines = np.append(lines, [[args.manual_mode_1]], axis=0)
-    
+
     if (args.manual_mode_2) and (len(args.manual_mode_2) == 4):
         if lines is None:
             lines = np.array([[args.manual_mode_2]])
         else:
             lines = np.append(lines, [[args.manual_mode_2]], axis=0)
-            
+
     # Draw lines on frame
     frameHough = frame.copy()
     drawHoughLines(frameHough, lines, SLOPE_THRESHOLD)
 
     # Annotate frame
     if args.annotate:
-        annotateFrame(imgCount, FRAME_FOLDER, lines, SLOPE_THRESHOLD)
+        annotateFrame(imgCount, CULANE_FRAME_FOLDER, lines, SLOPE_THRESHOLD)
         print(f'Annotated frame {imgCount:05}')
 
     # Resize frame for display
@@ -155,7 +156,7 @@ while True:
         frameHough, (int(SCALE*frameWidth), int(SCALE*frameHeight)), None)
     frameROI = cv.resize(
         frameROI, (int(SCALE*frameWidth), int(SCALE*frameHeight)), None)
-    
+
     # cv.imshow('frame', frame)
     # cv.imshow('frameSDCT', frameSDCT)
     cv.imshow('frameROI', frameROI)

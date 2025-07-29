@@ -1,8 +1,10 @@
 __pycache__
 .vscode
-Automatic-Workspace-Calibration-Based-on-Aruco
 build
-frame
+CLRerNet
+CLRNet
+DLNet
+frame*
 paper
 ros2_ws/calibrationdata*
 ros2_ws/build
@@ -11,4 +13,5 @@ ros2_ws/log
 ros2_ws/rosbag2_*
 SCNN
 seg_label_generate
+Ultra-Fast-Lane-Detection-v2
 *.mp4

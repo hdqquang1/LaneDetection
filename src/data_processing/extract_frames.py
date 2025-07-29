@@ -1,11 +1,12 @@
 import cv2 as cv
 import os.path
 
-from constants import (
+from src.config.constants import (
     FRAME_FOLDER,
+    RAW_FRAME_FOLDER,
     YAML_PATH
 )
-from utils import parse_yaml
+from src.lane_detection.utils import parse_yaml
 
 # Initialise camera
 cap = cv.VideoCapture('camera_hdr.mp4')
@@ -32,6 +33,10 @@ if not os.path.exists(FRAME_FOLDER):
     os.makedirs(FRAME_FOLDER)
     print(f'Created folder: {FRAME_FOLDER}.')
 
+if not os.path.exists(RAW_FRAME_FOLDER):
+    os.makedirs(RAW_FRAME_FOLDER)
+    print(f'Created folder: {RAW_FRAME_FOLDER}.')
+
 if not cap.isOpened():
     print('Error: Could not open video file.')
 
@@ -40,10 +45,10 @@ while True:
 
     if ret:
         filename = f'{imgCount:05}.jpg'
-        dir = os.path.join(FRAME_FOLDER, filename)
-        frame = cv.undistort(frame, mtx, dist, None, newCameraMtx)
+        dir = os.path.join(RAW_FRAME_FOLDER, filename)
+        # frame = cv.undistort(frame, mtx, dist, None, newCameraMtx)
         cv.imwrite(dir, frame)
-        imgCount +=1
+        imgCount += 1
         # print(f'Successfully write a frame at {dir}.')
     else:
         break

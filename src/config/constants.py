@@ -1,5 +1,5 @@
 # Frame folder path
-FRAME_FOLDER = 'frame'
+CULANE_FRAME_FOLDER = 'frame_culane/driver_00_01frame'
 
 # yaml file path
 YAML_PATH = 'ros2_ws/calibrationdata/ost.yaml'
