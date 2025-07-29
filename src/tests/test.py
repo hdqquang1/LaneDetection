@@ -7,7 +7,7 @@ from src.config.constants import (
     SCALE
 )
 
-START_FRAME = 0
+START_FRAME = 4202
 STOP_FRAME = None
 
 imgCount = START_FRAME
