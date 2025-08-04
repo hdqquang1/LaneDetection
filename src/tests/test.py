@@ -7,7 +7,7 @@ from src.config.constants import (
     SCALE
 )
 
-START_FRAME = 4202
+START_FRAME = 0
 STOP_FRAME = None
 
 imgCount = START_FRAME
@@ -17,8 +17,7 @@ while True:
     lineLabelFilename = f'{imgCount:05}.lines.txt'
 
     imgPath = os.path.join(CULANE_FRAME_FOLDER, imgFilename)
-    # lineLabelPath = os.path.join(CULANE_FRAME_FOLDER, lineLabelFilename)
-    lineLabelPath = os.path.join('frame_culane_backup/driver_00_01frame', lineLabelFilename)
+    lineLabelPath = os.path.join(CULANE_FRAME_FOLDER, lineLabelFilename)
 
     if not os.path.exists(imgPath):
         break
