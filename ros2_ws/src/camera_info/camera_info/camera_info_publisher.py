@@ -12,7 +12,7 @@ class CameraInfoPublisher(Node):
     def __init__(self):
         super().__init__('camera_info_publisher')
         self.__calibration_yaml = self.declare_parameter(
-            'yaml_path', 'calibrationdata/ost.yaml').value
+            'yaml_path', 'calibration/camera_left_old.yaml').value
         self.__image_topic = self.declare_parameter(
             'image_topic', 'camera_left/image/compressed').value
         self.__camera_info_topic = self.declare_parameter(
