@@ -1,6 +1,5 @@
 __pycache__
 .vscode
-build
 dataset*
 paper
 repos
@@ -8,6 +7,4 @@ ros2_ws/build
 ros2_ws/install
 ros2_ws/log
 ros2_ws/rosbag2_*
-seg_label_generate
-Ultra-Fast-Lane-Detection-v2
 *.mp4

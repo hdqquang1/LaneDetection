@@ -1,6 +1,3 @@
-# extract_frames.py extracts and resizes frames in video. Optional argument
-# outputs resized video.
-
 from config.constants import (
     CULANE_WIDTH,
     CULANE_HEIGHT,
@@ -13,13 +10,14 @@ import cv2 as cv
 import numpy as np
 import os
 import yaml
+from tqdm import tqdm # Import tqdm
 
 # Arguments
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--video_output',
-        help='path to output resized video including filename',
+        help='path to output video including filename',
         default=None,
         type=str
     )
@@ -50,6 +48,7 @@ def main():
     # Get frame width and height
     frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 
     # Read calibration data
     mtx, dist = parse_yaml(YAML_PATH)
@@ -63,10 +62,7 @@ def main():
         (frame_width, frame_height)
     )
 
-    img_count = 0
-
-    os.makedirs(DATASET_FOLDER, exist_ok=True)
-
+    # Initialise video writer
     out = None
     if args.video_output:
         output_dir = os.path.dirname(args.video_output)
@@ -76,35 +72,37 @@ def main():
         fourcc = cv.VideoWriter_fourcc(*'mp4v')
         fps = cap.get(cv.CAP_PROP_FPS)
         out = cv.VideoWriter(args.video_output, fourcc,
-                             fps, (CULANE_WIDTH, CULANE_HEIGHT))
+                             fps, (frame_width, frame_height))
+    else:
+        img_count = 0
+        os.makedirs(DATASET_FOLDER, exist_ok=True)
 
-    while True:
+    for _ in tqdm(range(total_frames), desc="Processing frames"):
         ret, frame = cap.read()
 
         if not ret:
             break
 
-        filename = f'{img_count:05}.jpg'
-        img_path = os.path.join(DATASET_FOLDER, filename)
-
         # Undistort frame
-        undistorted_frame = cv.undistort(
-            frame, mtx, dist, None, newCameraMtx)
+        frame = cv.undistort(frame, mtx, dist, None, newCameraMtx)
 
-        # Resize frame
-        resized_frame = cv.resize(
-            undistorted_frame, (CULANE_WIDTH, CULANE_HEIGHT), None)
-
-        cv.imwrite(img_path, resized_frame)
+        # Write to video
         if out:
-            out.write(resized_frame)
-
-        img_count += 1
-        print(f'Successfully wrote frame {img_count} to {img_path}.')
+            out.write(frame)
+        # Output frames
+        else:
+            frame = cv.resize(
+                frame, (CULANE_WIDTH, CULANE_HEIGHT), cv.INTER_CUBIC)
+            filename = f'{img_count:05}.jpg'
+            img_path = os.path.join(DATASET_FOLDER, filename)
+            cv.imwrite(img_path, frame)
+            img_count += 1
 
     if out:
-        print(f'Successfully wrote resized video to {args.video_output}.')
+        print(f'Successfully wrote video to {args.video_output}.')
         out.release()
+    else:
+        print(f'Successfully wrote {img_count} frames to {DATASET_FOLDER}.')
 
     cap.release()
 

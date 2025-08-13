@@ -1,7 +1,7 @@
 # constants.py contains constants and paths.
 
 # Frame folder path
-DATASET_FOLDER = 'dataset_backup/driver_00_01frame'
+DATASET_FOLDER = 'dataset/driver_00_01frame'
 
 # yaml file path
 YAML_PATH = 'ros2_ws/calibration/camera_left_old.yaml'
