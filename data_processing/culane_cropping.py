@@ -1,9 +1,9 @@
 import cv2 as cv
-import numpy as np
 import os
+from tqdm import tqdm
 
 
-list_path = 'CULane/list/train.txt'
+list_path = '/home/its/Project/CULane/list/train.txt'
 factor = 2
 X2 = 820
 X1 = int(X2 - 164*factor)
@@ -31,8 +31,9 @@ def read_label_file(label_path):
                 # Check and update coordinates based on cropped image
                 if (X1 <= x <= X2) and (Y1 <= y < Y2):
                     lane.append([(x - X1)*5, (y - Y1)*5])
-
-        lanes.append(lane)
+                    
+        if lane:
+            lanes.append(lane)
 
     return lanes
 
@@ -50,9 +51,7 @@ def main():
     with open(list_path, 'r') as f:
         img_paths = f.readlines()
 
-    test_count = 0
-
-    for img_path in img_paths:
+    for img_path in tqdm(img_paths, desc='Processing images'):
 
         # Extract image and label file path
         ori_img_path = 'CULane' + img_path.strip()

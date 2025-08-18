@@ -1,6 +1,7 @@
 __pycache__
 .vscode
-CULane
+attempt*
+CULane*
 dataset
 paper
 repos
@@ -8,5 +9,6 @@ ros2_ws/build
 ros2_ws/install
 ros2_ws/log
 ros2_ws/rosbag2_*
-todo.txt
+*.tar.gz
+*.txt
 *.mp4
