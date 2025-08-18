@@ -29,9 +29,9 @@ def read_label_file(label_path):
                 y = int(float(coords[i+1]))
 
                 # Check and update coordinates based on cropped image
-                if (X1 <= x <= X2) and (Y1 <= y < Y2):
+                if (X1 <= x <= X2) and (Y1 <= y <= Y2):
                     lane.append([(x - X1)*5, (y - Y1)*5])
-                    
+
         if lane:
             lanes.append(lane)
 
@@ -69,7 +69,7 @@ def main():
         # Crop image
         img_cropped = img[Y1:Y2, X1:X2]
         img_cropped = cv.resize(img_cropped, (1640, 590), cv.INTER_CUBIC)
-        
+
         # Write cropped image and new label file
         cv.imwrite(new_img_path, img_cropped)
         write_label_file(new_label_path, lanes)

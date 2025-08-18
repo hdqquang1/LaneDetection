@@ -10,7 +10,7 @@ import cv2 as cv
 import numpy as np
 import os
 import yaml
-from tqdm import tqdm # Import tqdm
+from tqdm import tqdm
 
 # Arguments
 def get_args():
