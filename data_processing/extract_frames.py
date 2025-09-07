@@ -66,8 +66,7 @@ def main():
     out = None
     if args.video_output:
         output_dir = os.path.dirname(args.video_output)
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
         fourcc = cv.VideoWriter_fourcc(*'mp4v')
         fps = cap.get(cv.CAP_PROP_FPS)

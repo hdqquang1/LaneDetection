@@ -3,7 +3,7 @@ import os
 from tqdm import tqdm
 
 
-list_path = '/home/its/Project/CULane/list/train.txt'
+list_path = '/home/its/Project/CULane/list/test.txt'
 factor = 2
 X2 = 820
 X1 = int(X2 - 164*factor)

@@ -3,6 +3,7 @@ __pycache__
 attempt*
 CULane*
 dataset*
+inpaint_outputs
 paper
 repos
 ros2_ws/build
@@ -12,3 +13,4 @@ ros2_ws/rosbag2_*
 *.tar.gz
 *.txt
 *.mp4
+*.zip
