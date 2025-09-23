@@ -83,15 +83,15 @@ def main():
             break
 
         # Undistort frame
-        frame = cv.undistort(frame, mtx, dist, None, newCameraMtx)
+        # frame = cv.undistort(frame, mtx, dist, None, newCameraMtx)
 
         # Write to video
         if out:
             out.write(frame)
         # Output frames
         else:
-            frame = cv.resize(
-                frame, (CULANE_WIDTH, CULANE_HEIGHT), cv.INTER_CUBIC)
+            # frame = cv.resize(
+            #     frame, (CULANE_WIDTH, CULANE_HEIGHT), cv.INTER_CUBIC)
             filename = f'{img_count:05}.jpg'
             img_path = os.path.join(DATASET_FOLDER, filename)
             cv.imwrite(img_path, frame)
