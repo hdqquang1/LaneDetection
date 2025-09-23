@@ -1,13 +1,13 @@
 # test.py provides manual control through frames to check for labelling errors.
 
 from config.constants import (
-    DATASET_FOLDER,
     DISPLAY_SCALE
 )
 import cv2 as cv
 import numpy as np
 import os
 
+DATASET_FOLDER = '/home/its/Project/inpaint_outputs' # Change to your dataset folder
 # Adjust start and stop frame as needed
 START_FRAME = 0
 STOP_FRAME = None
